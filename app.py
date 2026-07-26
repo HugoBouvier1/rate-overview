@@ -42,7 +42,7 @@ import plotly.graph_objects as go
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Rates Desk", layout="wide",
+st.set_page_config(page_title="Rates overview", layout="wide",
                    initial_sidebar_state="expanded")
 
 
@@ -576,16 +576,10 @@ with st.sidebar:
         st.cache_data.clear()
         st.rerun()
 
-    st.divider()
-    st.caption("**API key status**")
-    st.caption(("OK  " if HAS_FRED_KEY
-                else "MISSING  ") + "FRED (only key required)")
-    st.caption("OK   ECB / Bundesbank / BoE / US Treasury (no key)")
-
 cutoff = (datetime(datetime.now().year, 1, 1) if period == "YTD"
           else datetime.now() - timedelta(days=PERIODS[period]))
 
-st.title("Rates & Macro Desk")
+st.title("Rates overview")
 st.markdown('<div class="src-note">Sources: FRED - ECB Data Portal - '
             'Deutsche Bundesbank - Bank of England - US Treasury. '
             'End-of-day data; each row is timestamped with its own '
