@@ -68,11 +68,12 @@ HAS_FRED_KEY = bool(FRED_API_KEY.strip())
 # =========================================================================
 
 
-HISTORY_DAYS = 3700
+HISTORY_DAYS = 7350   # ~20 years of history fetched per series
 HTTP_TIMEOUT = 60   # the ECB YC dataflow regularly takes 40s+
 
 PERIODS = {"1W": 7, "1M": 30, "3M": 90, "6M": 180,
-           "YTD": None, "1Y": 365, "3Y": 1095, "5Y": 1825, "10Y": 3650}
+           "YTD": None, "1Y": 365, "3Y": 1095, "5Y": 1825,
+           "10Y": 3650, "20Y": 7300}
 
 SESSION = requests.Session()
 SESSION.headers.update({"User-Agent": "rates-desk/2.1"})
@@ -322,11 +323,17 @@ def _ust_year(year: int) -> pd.DataFrame:
 
 @st.cache_data(ttl=3600, show_spinner=False, persist="disk")
 def _ust_all() -> pd.DataFrame:
-    """All years of the curve, fetched CONCURRENTLY and concatenated."""
+    """All years of the curve, fetched CONCURRENTLY and concatenated.
+
+    Span is derived from HISTORY_DAYS so it stays in sync with the rest
+    of the app. The Treasury XML is one request per calendar year, run
+    in parallel.
+    """
     this_year = datetime.now().year
-    years = list(range(max(this_year - 10, 1990), this_year + 1))
+    span_years = max(1, HISTORY_DAYS // 365)
+    years = list(range(max(this_year - span_years, 1990), this_year + 1))
     frames = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=11) as ex:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
         futs = {ex.submit(_ust_year, y): y for y in years}
         for f in concurrent.futures.as_completed(futs):
             try:
@@ -676,8 +683,11 @@ def render_deep_dive(inst: str, df: pd.DataFrame) -> None:
         st.plotly_chart(fig, use_container_width=True,
                         key=f"chart::{inst}")
 
-        st.caption(f"Last observation: {d.index[-1].strftime('%d/%m/%Y')} - "
-                   f"{len(d)} points over the selected period")
+        st.caption(
+            f"Range: {d.index[0].strftime('%d/%m/%Y')} to "
+            f"{d.index[-1].strftime('%d/%m/%Y')} - {len(d)} points. "
+            "Series shorter than the selected period show their full "
+            "available history.")
 
 
 def compute_row(name, df, kind, src_label):
