@@ -762,6 +762,11 @@ for section in [s for s in INSTRUMENTS if s in regions]:
                     st.session_state.tbl_ver[other] = (
                         st.session_state.tbl_ver.get(other, 0) + 1)
             st.rerun()
+    elif st.session_state.sel and st.session_state.sel[0] == section:
+        # This table owned the selection and now reports no rows: the user
+        # unticked it. Drop the selection so the chart disappears.
+        st.session_state.sel = None
+        st.rerun()
 
     # --- Detail panel, inline under THIS section only ---
     if st.session_state.sel and st.session_state.sel[0] == section:
